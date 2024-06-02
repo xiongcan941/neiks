@@ -11,6 +11,6 @@ public class TestEndpoint {
     @GetMapping("/feigh1")
     public String testFeigh() {
         throw new RuntimeException("异常.................");
-        
+
     }
 }

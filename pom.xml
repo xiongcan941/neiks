@@ -13,6 +13,7 @@
         <module>study_bbs_admin_server</module>
         <module>study_bbs_admin_common</module>
         <module>study_bbs_admin_component</module>
+        <module>study_bbs_admin_component/study_bbs_admin_service</module>
     </modules>
 
     <properties>
