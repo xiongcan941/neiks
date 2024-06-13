@@ -57,6 +57,9 @@ public enum ActivityException implements ExceptionCode {
 
     LUCKY_BAG_ACTIVITY_SERVICE_GIFT_LIST_UPDATE_FAIL(601007, "服务组件礼物列表更新失败", "LUCKY_BAG_ACTIVITY_SERVICE_GIFT_LIST_UPDATE_FAIL"),
 
+    LUCKY_BAG_ACTIVITY_BATCH_INSERT_LUCKY_BAG_FAIL(601008, "福袋活动批量更新失败","LUCKY_BAG_ACTIVITY_BATCH_INSERT_LUCKY_BAG_FAIL"),
+
+    LUCKY_BAG_ACTIVITY_ADD_FAIL(601009, "福袋活动添加失败","LUCKY_BAG_ACTIVITY_ADD_FAIL" ),
     /**
      * 福袋活动--------------------------------------------end
      */
@@ -113,12 +116,9 @@ public enum ActivityException implements ExceptionCode {
 
     SCORE_GOLD_ACTIVITY_SERVICE_GOLD_AMOUNT_NOT_MEET(604004, "系统服务未使用金币总数量不足", "SCORE_GOLD_ACTIVITY_SERVICE_GOLD_AMOUNT_NOT_MEET"),
 
-    SCORE_GOLD_ACTIVITY_SERVICE_GOLD_AMOUNT_UPDATE_FAIL(604005, "系统服务使用金币数量更新失败", "SCORE_GOLD_ACTIVITY_SERVICE_GOLD_AMOUNT_UPDATE_FAIL"),
+    SCORE_GOLD_ACTIVITY_SERVICE_GOLD_AMOUNT_UPDATE_FAIL(604005, "系统服务使用金币数量更新失败", "SCORE_GOLD_ACTIVITY_SERVICE_GOLD_AMOUNT_UPDATE_FAIL");
 
-    /**
-     * 积分兑换金币活动--------------------------------------------------end
-     */
-    ;
+
 
     private Integer code;
 

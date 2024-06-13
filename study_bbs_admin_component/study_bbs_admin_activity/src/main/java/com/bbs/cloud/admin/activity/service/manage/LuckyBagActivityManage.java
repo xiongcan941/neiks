@@ -11,6 +11,7 @@ import com.bbs.cloud.admin.activity.param.CreateActivityParam;
 import com.bbs.cloud.admin.activity.param.OperatorActivityParam;
 import com.bbs.cloud.admin.activity.service.ActivityManage;
 import com.bbs.cloud.admin.activity.service.ActivityService;
+import com.bbs.cloud.admin.common.contant.RedisContant;
 import com.bbs.cloud.admin.common.enums.activity.ActivityStatusEnum;
 import com.bbs.cloud.admin.common.enums.activity.ActivityTypeEnum;
 import com.bbs.cloud.admin.common.enums.activity.LuckyBagStatusEnum;
@@ -20,6 +21,7 @@ import com.bbs.cloud.admin.common.feigh.client.ServiceFeighClient;
 import com.bbs.cloud.admin.common.result.HttpResult;
 import com.bbs.cloud.admin.common.util.CommonUtil;
 import com.bbs.cloud.admin.common.util.JsonUtils;
+import com.bbs.cloud.admin.common.util.RedisLockHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +45,9 @@ public class LuckyBagActivityManage implements ActivityManage {
     @Autowired
     private ServiceFeighClient serviceFeighClient;
 
+    @Autowired
+    private RedisLockHelper redisLockHelper;
+
     @Override
     @Transactional(rollbackFor = {HttpException.class,Exception.class})
     public HttpResult createActivity(CreateActivityParam createActivityParam) {
@@ -58,42 +63,49 @@ public class LuckyBagActivityManage implements ActivityManage {
             return HttpResult.generateHttpResult(ActivityException.LUCKY_BAG_ACTIVITY_AMOUNT_LESS_THAN_ONE);
         }
 
-        HttpResult<Integer> result = serviceFeighClient.queryServiceGiftTotal();
-        if(result == null || !CommonExceptionEnum.SUCCESS.getCode().equals(result.getCode()) ||
-                result.getData() == null){
-            logger.info("开始创建福袋活动，远程调用，获取服务组件总数量失败,请求参数:{}，result:{}", JsonUtils.objectToJson(createActivityParam),
-                    JsonUtils.objectToJson(result));
-            return HttpResult.generateHttpResult(ActivityException.LUCKY_BAG_ACTIVITY_SERVICE_GIFT_AMOUNT_FAIL);
-        }
-        Integer total = result.getData();
-        if(total < amount){
-            logger.info("开始创建福袋活动，远程调用，获取服务组件总数量不足,请求参数:{}，result:{}", JsonUtils.objectToJson(createActivityParam),
-                    JsonUtils.objectToJson(result));
-            return HttpResult.generateHttpResult(ActivityException.LUCKY_BAG_ACTIVITY_SERVICE_GIFT_AMOUNT_NOT_MEET);
-        }
+        String key = RedisContant.BBS_CLOUD_LOCK_GIFT_KEY;
 
         try {
-            //第一步：创建活动
-            logger.info("开始创建福袋活动------开始创建活动,请求参数:{}", JsonUtils.objectToJson(createActivityParam));
-            ActivityDTO activityDTO = new ActivityDTO();
-            activityDTO.setId(CommonUtil.createUUID());
-            activityDTO.setName(createActivityParam.getName());
-            activityDTO.setContent(createActivityParam.getContent());
-            activityDTO.setActivityType(createActivityParam.getActivityType());
-            activityDTO.setAmount(amount);
-            activityDTO.setStatus(ActivityStatusEnum.INITIAL.getStatus());
-            activityDTO.setCreateDate(new Date());
-            activityDTO.setUpdateDate(new Date());
-            activityMapper.insertActivityDTO(activityDTO);
+            if(redisLockHelper.lock(key,CommonUtil.createUUID(),100000L)){
+                HttpResult<Integer> result = serviceFeighClient.queryServiceGiftTotal();
+                if(result == null || !CommonExceptionEnum.SUCCESS.getCode().equals(result.getCode()) ||
+                        result.getData() == null){
+                    logger.info("开始创建福袋活动，远程调用，获取服务组件总数量失败,请求参数:{}，result:{}", JsonUtils.objectToJson(createActivityParam),
+                            JsonUtils.objectToJson(result));
+                    return HttpResult.generateHttpResult(ActivityException.LUCKY_BAG_ACTIVITY_SERVICE_GIFT_AMOUNT_FAIL);
+                }
+                Integer total = result.getData();
+                if(total < amount){
+                    logger.info("开始创建福袋活动，远程调用，获取服务组件总数量不足,请求参数:{}，result:{}", JsonUtils.objectToJson(createActivityParam),
+                            JsonUtils.objectToJson(result));
+                    return HttpResult.generateHttpResult(ActivityException.LUCKY_BAG_ACTIVITY_SERVICE_GIFT_AMOUNT_NOT_MEET);
+                }
+                //第一步：创建活动
+                logger.info("开始创建福袋活动------开始创建活动,请求参数:{}", JsonUtils.objectToJson(createActivityParam));
+                ActivityDTO activityDTO = new ActivityDTO();
+                activityDTO.setId(CommonUtil.createUUID());
+                activityDTO.setName(createActivityParam.getName());
+                activityDTO.setContent(createActivityParam.getContent());
+                activityDTO.setActivityType(createActivityParam.getActivityType());
+                activityDTO.setAmount(amount);
+                activityDTO.setStatus(ActivityStatusEnum.INITIAL.getStatus());
+                activityDTO.setCreateDate(new Date());
+                activityDTO.setUpdateDate(new Date());
+                try {
+                    activityMapper.insertActivityDTO(activityDTO);
+                } catch (Exception e){
+                    logger.info("开始创建福袋活动------添加活动失败,请求参数:{}", JsonUtils.objectToJson(createActivityParam));
+                    e.printStackTrace();
+                    throw new HttpException(ActivityException.LUCKY_BAG_ACTIVITY_ADD_FAIL);
+                }
 
-            //第二步：创建福袋
-            List<GiftDTO> GiftDTOList = packLuckBag(amount,activityDTO.getId());
-            //第三步：更新服务组件的礼物列表
-            logger.info("开始创建福袋活动------更新服务组件礼物列表,请求参数:{}", JsonUtils.objectToJson(createActivityParam));
-            HttpResult updateResult = serviceFeighClient.updateServiceGiftList(JsonUtils.objectToJson(GiftDTOList));
-            if(updateResult == null || !CommonExceptionEnum.SUCCESS.getCode().equals(updateResult.getCode())){
-                logger.info("开始创建福袋活动------更新服务组件礼物列表异常,请求参数:{}", JsonUtils.objectToJson(createActivityParam));
-                throw new HttpException(ActivityException.RED_PACKET_ACTIVITY_SERVICE_GOLD_UPDATE_FAIL);
+
+                //第二步：创建福袋
+                List<GiftDTO> GiftDTOList = packLuckBag(amount,activityDTO.getId());
+
+            } else {
+                logger.info("开始创建福袋活动------请勿重复操作,请求参数:{}", JsonUtils.objectToJson(createActivityParam));
+                return HttpResult.generateHttpResult(ActivityException.ACTIVITY_NOT_REPEAT_MANAGE);
             }
         } catch (HttpException e){
             logger.info("开始创建福袋活动，发生HttpException异常,请求参数:{}", JsonUtils.objectToJson(createActivityParam));
@@ -102,9 +114,9 @@ public class LuckyBagActivityManage implements ActivityManage {
         } catch (Exception e){
             logger.info("开始创建福袋活动，发生Exception异常,请求参数:{}", JsonUtils.objectToJson(createActivityParam));
             e.printStackTrace();
-            throw e;
+            return HttpResult.fail();
         } finally {
-
+            redisLockHelper.releaseLock(key);
         }
 
 
@@ -145,8 +157,23 @@ public class LuckyBagActivityManage implements ActivityManage {
             giftDTO.setUnusedAmount(giftDTO.getUnusedAmount() - ActivityContant.DEFAULT_LUCKY_BAG_CONSUME_AMOUNT);
             giftDTOMap.put(luckyBagDTO.getGiftType(),giftDTO);
         }
-        luckyBagMapper.insertLuckyBag(luckyBagDTOList);
         List giftDTOList = Arrays.asList(giftDTOMap.values().toArray());
+        //第三步：更新服务组件的礼物列表
+        logger.info("开始创建福袋活动------更新服务组件礼物列表,请求参数:{}", JsonUtils.objectToJson(giftDTOList));
+        HttpResult updateResult = serviceFeighClient.updateServiceGiftList(JsonUtils.objectToJson(giftDTOList));
+        if(updateResult == null || !CommonExceptionEnum.SUCCESS.getCode().equals(updateResult.getCode())){
+            logger.info("开始创建福袋活动------更新服务组件礼物列表异常,请求参数:{}", JsonUtils.objectToJson(giftDTOList));
+            throw new HttpException(ActivityException.RED_PACKET_ACTIVITY_SERVICE_GOLD_UPDATE_FAIL);
+        }
+        try {
+            luckyBagMapper.insertLuckyBag(luckyBagDTOList);
+        } catch (Exception e) {
+            logger.info("开始创建福袋活动------批量添加福袋异常,请求参数:{}", JsonUtils.objectToJson(giftDTOList));
+            logger.info("开始创建福袋活动------批量添加福袋异常，补偿服务组件礼物列表,请求参数:{}", JsonUtils.objectToJson(giftDTOList));
+            serviceFeighClient.updateServiceGiftList(JsonUtils.objectToJson(giftDTOS));
+            logger.info("开始创建福袋活动------批量添加福袋异常，补偿服务组件礼物列表，补偿成功,请求参数:{}", JsonUtils.objectToJson(giftDTOList));
+            throw new HttpException(ActivityException.LUCKY_BAG_ACTIVITY_BATCH_INSERT_LUCKY_BAG_FAIL);
+        }
         return giftDTOList;
     }
 
