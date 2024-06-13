@@ -13,11 +13,11 @@ public interface ServiceFeighClient {
     @GetMapping("service/endpoint/gift/total/query")
     public HttpResult<Integer> queryServiceGiftTotal();
 
-    @GetMapping("service/endpoint/gilt/list/query")
+    @GetMapping("service/endpoint/gift/list/query")
     public HttpResult<String> queryServiceGiftList();
 
 
-    @PostMapping("service/endpoint/gilt/list/update")
+    @PostMapping("service/endpoint/gift/list/update")
     public HttpResult updateServiceGiftList(@RequestParam("data") String data);
 
 

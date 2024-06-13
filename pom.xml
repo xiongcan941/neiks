@@ -14,6 +14,7 @@
         <module>study_bbs_admin_common</module>
         <module>study_bbs_admin_component</module>
         <module>study_bbs_admin_component/study_bbs_admin_service</module>
+        <module>study_bbs_admin_component/study_bbs_admin_activity</module>
     </modules>
 
     <properties>

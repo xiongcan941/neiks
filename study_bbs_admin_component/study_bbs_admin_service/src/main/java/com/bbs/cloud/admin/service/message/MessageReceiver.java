@@ -8,6 +8,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -17,12 +18,12 @@ public class MessageReceiver {
 
     final static Logger logger = LoggerFactory.getLogger(MessageReceiver.class);
 
+    @Autowired
     private List<MessageHandler> messageHandlers;
 
     @RabbitListener(queues = RabbitContant.SERVICE_QUEUE_NAME)
     public void receiver(String message){
         logger.info("接收到订单成功消息{}",message);
-        System.out.println("message:"+message);
         if(StringUtils.isEmpty(message)){
             logger.info("接收到订单消息为空，消息:{}",message);
             return;
@@ -40,10 +41,6 @@ public class MessageReceiver {
             return;
         }
         Integer serviceType = orderMessageDTO.getServiceType();
-
-        /**
-         * TODO 消息处理未完成
-         */
         //找到对应的实现类处理
         messageHandlers.stream()
                 .filter(item -> item.getServiceType().equals(serviceType))

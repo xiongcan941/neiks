@@ -44,6 +44,7 @@ public class GiftOrderMessageHandler implements MessageHandler {
                     serviceGiftDTO.setUnusedAmount(ServiceContant.DEFAULT_SERVICE_UNUSED_GIFT_AMOUNT);
                     serviceGiftDTO.setUsedAmount(ServiceContant.DEFAULT_SERVICE_USED_GIFT_AMOUNT);
                     serviceGiftMapper.insertGiftDTO(serviceGiftDTO);
+                    continue;
                 } else {
                     /**
                      * TODO 去查询活动使用的情况来进行库存更新
