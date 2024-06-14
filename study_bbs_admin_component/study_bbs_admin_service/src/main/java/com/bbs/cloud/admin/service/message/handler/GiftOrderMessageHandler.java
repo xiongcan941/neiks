@@ -1,6 +1,9 @@
 package com.bbs.cloud.admin.service.message.handler;
 
 import com.bbs.cloud.admin.common.enums.gift.GiftEnum;
+import com.bbs.cloud.admin.common.error.CommonExceptionEnum;
+import com.bbs.cloud.admin.common.feigh.client.ActivityFeighClient;
+import com.bbs.cloud.admin.common.result.HttpResult;
 import com.bbs.cloud.admin.common.util.CommonUtil;
 import com.bbs.cloud.admin.common.util.JsonUtils;
 import com.bbs.cloud.admin.service.contant.ServiceContant;
@@ -25,6 +28,9 @@ public class GiftOrderMessageHandler implements MessageHandler {
     @Autowired
     private ServiceGiftMapper serviceGiftMapper;
 
+    @Autowired
+    private ActivityFeighClient activityFeighClient;
+
     @Override
     public void handler(OrderMessageDTO orderMessageDTO) {
         logger.info("开始处理礼物服务，message{}", JsonUtils.objectToJson(orderMessageDTO));
@@ -46,9 +52,21 @@ public class GiftOrderMessageHandler implements MessageHandler {
                     serviceGiftMapper.insertGiftDTO(serviceGiftDTO);
                     continue;
                 } else {
-                    /**
-                     * TODO 去查询活动使用的情况来进行库存更新
-                     */
+                    logger.info("开始处理礼物服务订单-整理库存，礼物信息：{}", serviceGiftDTO);
+                    HttpResult<Integer> result = activityFeighClient.queryServiceGiftTotal(giftType);
+                    if(result == null || !CommonExceptionEnum.SUCCESS.getCode().equals(result.getCode()) ||
+                        result.getData() == null){
+                        logger.info("远程获取活动组件的礼物使用情况，发生异常，礼物信息：{}", serviceGiftDTO);
+                        result.setData(0);
+                    }
+                    Integer usedActivityGiftAmount = result.getData();
+                    Integer amount = serviceGiftDTO.getAmount() + ServiceContant.DEFAULT_SERVICE_GIFT_AMOUNT;
+                    Integer usedAmount = usedActivityGiftAmount;
+                    Integer unusedAmount = amount - usedAmount;
+                    serviceGiftDTO.setUsedAmount(usedAmount);
+                    serviceGiftDTO.setUnusedAmount(unusedAmount);
+                    serviceGiftDTO.setAmount(amount);
+                    serviceGiftMapper.updateGiftDTO(serviceGiftDTO);
 
                 }
             }
