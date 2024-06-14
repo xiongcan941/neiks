@@ -40,6 +40,7 @@ public class GoldOrderMessageHandler implements MessageHandler {
                 serviceGoldDTO.setUsedGold(ServiceContant.DEFAULT_SERVICE_USED_GOLD);
                 serviceGoldMapper.insertServiceGold(serviceGoldDTO);
             } else {
+
                 /**
                  * TODO 去查询过去活动中金币的使用情况，进行库存更新
                  */
