@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.bbs.cloud.user.mapper.BackpackMapper" >
+
+    <resultMap id="base_result" type="com.bbs.cloud.user.dto.BackpackDTO" >
+        <id column="id" property="id" jdbcType="VARCHAR" />
+        <result column="user_id" property="userId" jdbcType="VARCHAR" />
+        <result column="gold" property="gold" jdbcType="INTEGER" />
+    </resultMap>
+
+    <sql id="table">backpack</sql>
+
+    <sql id="Base_Column_List">id, user_id, gold</sql>
+
+
+    <insert id="insertBackpack">
+        insert into
+            <include refid="table" />
+            ( <include refid="Base_Column_List" /> )
+        values
+            (#{id}, #{userId}, #{gold});
+    </insert>
+
+    <update id="updateBackpack">
+        update
+        <include refid="table" />
+        set gold=#{gold} where id=#{id}
+    </update>
+
+    <select id="queryBackpackDTO" resultMap="base_result">
+        select * from
+        <include refid="table" />
+        where user_id=#{userId}
+    </select>
+</mapper>

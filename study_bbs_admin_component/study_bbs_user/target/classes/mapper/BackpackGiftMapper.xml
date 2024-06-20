@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.bbs.cloud.user.mapper.BackpackGiftMapper" >
+
+    <resultMap id="base_result" type="com.bbs.cloud.user.dto.BackpackGiftDTO" >
+        <id column="id" property="id" jdbcType="VARCHAR" />
+        <result column="backpack_id" property="backpackId" jdbcType="VARCHAR" />
+        <result column="gift_type" property="giftType" jdbcType="INTEGER" />
+        <result column="amount" property="amount" jdbcType="INTEGER" />
+    </resultMap>
+
+    <sql id="table">backpack_gift</sql>
+
+    <sql id="Base_Column_List">id, backpack_id, gift_type, amount</sql>
+
+
+    <insert id="insertBackpackGiftDTO">
+        insert into
+            <include refid="table" />
+            ( <include refid="Base_Column_List" /> )
+        values
+            (#{id}, #{backpackId}, #{giftType}, #{amount});
+    </insert>
+
+
+    <update id="updateBackpackGift">
+        update
+        <include refid="table" />
+        set amount=#{amount} where id=#{id}
+    </update>
+
+    <select id="queryBackpackGiftDTOList" resultMap="base_result">
+
+        select * from
+        <include refid="table" />
+        where backpack_id=#{backpackId}
+
+    </select>
+
+    <select id="queryBackpackGiftDTO" resultMap="base_result">
+        select * from
+        <include refid="table" />
+        where backpack_id=#{backpackId} and gift_type=#{giftType}
+    </select>
+</mapper>
